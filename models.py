@@ -255,6 +255,11 @@ class LanguageIDModel(Module):
         self.languages = ["English", "Spanish", "Finnish", "Dutch", "Polish"]
         super(LanguageIDModel, self).__init__()
         "*** YOUR CODE HERE ***"
+        self.hidden_size = 300
+        self.wx = Linear(self.num_chars, self.hidden_size)
+        self.wh = Linear(self.hidden_size, self.hidden_size)
+        self.output1 = Linear(self.hidden_size, 150)
+        self.output2 = Linear(150, len(self.languages))
 
 
     def run(self, xs):
@@ -287,6 +292,10 @@ class LanguageIDModel(Module):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        h = relu(self.wx(xs[0]))
+        for x in xs[1:]:
+            h = relu(self.wx(x) + self.wh(h))
+        return self.output2(relu(self.output1(h)))
 
     
     def get_loss(self, xs, y):
@@ -304,6 +313,8 @@ class LanguageIDModel(Module):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        prediction = self.run(xs)
+        return cross_entropy(prediction,y)
         
 
     def train(self, dataset):
@@ -321,6 +332,21 @@ class LanguageIDModel(Module):
         For more information, look at the pytorch documentation of torch.movedim()
         """
         "*** YOUR CODE HERE ***"
+        lr = 0.001
+        batch_size = 64
+        optimizer = optim.Adam(self.parameters(), lr=lr)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        while True:
+            for batch in dataloader:
+                x = movedim(batch['x'], 0, 1)
+                y = batch['label']
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                optimizer.step()
+            acc = dataset.get_validation_accuracy()
+            if acc >= 0.83:
+                break
 
         
 
@@ -340,10 +366,15 @@ def Convolve(input: tensor, weight: tensor):
     input_tensor_dimensions = input.shape
     weight_dimensions = weight.shape
     Output_Tensor = tensor(())
-    "*** YOUR CODE HERE ***"
-
-    
-    "*** End Code ***"
+    out_h = input_tensor_dimensions[0] - weight_dimensions[0] + 1
+    out_w = input_tensor_dimensions[1] - weight_dimensions[1] + 1
+    rows = []
+    for y in range(out_h):
+        row = stack([
+            (input[y:y+weight_dimensions[0], x:x+weight_dimensions[1]] * weight).sum()
+            for x in range(out_w)])
+        rows.append(row)
+    Output_Tensor = stack(rows)
     return Output_Tensor
 
 
@@ -367,7 +398,8 @@ class DigitConvolutionalModel(Module):
         output_size = 10
 
         self.convolution_weights = Parameter(ones((3, 3)))
-        """ YOUR CODE HERE """
+        self.layer1 = Linear(26 * 26, 128)
+        self.layer2 = Linear(128, output_size)
 
 
 
@@ -384,6 +416,9 @@ class DigitConvolutionalModel(Module):
         x = stack(list(map(lambda sample: Convolve(sample, self.convolution_weights), x)))
         x = x.flatten(start_dim=1)
         """ YOUR CODE HERE """
+        x = relu(self.layer1(x))
+        return self.layer2(x)
+
 
 
     def get_loss(self, x, y):
@@ -400,6 +435,8 @@ class DigitConvolutionalModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
+        prediction = self.run(x)
+        return cross_entropy(prediction, y)
 
      
         
@@ -409,6 +446,21 @@ class DigitConvolutionalModel(Module):
         Trains the model.
         """
         """ YOUR CODE HERE """
+        lr = 0.001
+        batch_size = 64
+        optimizer = optim.Adam(self.parameters(), lr=lr)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        while True:
+            for batch in dataloader:
+                x = batch['x']
+                y = batch['label']
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                optimizer.step()
+            acc = dataset.get_validation_accuracy()
+            if acc >= 0.82:
+                break
 
 
 
