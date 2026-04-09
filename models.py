@@ -199,7 +199,7 @@ class DigitClassificationModel(Module):
 
 
 
-
+    #do this
     def run(self, x):
         """
         Runs the model for a batch of examples.
