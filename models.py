@@ -187,9 +187,15 @@ class DigitClassificationModel(Module):
     def __init__(self):
         # Initialize your model parameters here
         super().__init__()
-        input_size = 28 * 28
+        input_size = 28 * 28  # 784
         output_size = 10
-        "*** YOUR CODE HERE ***"
+        
+        hidden1 = 256
+        hidden2 = 128
+        
+        self.layer1 = Linear(input_size, hidden1)
+        self.layer2 = Linear(hidden1, hidden2)
+        self.layer3 = Linear(hidden2, output_size)
 
 
 
@@ -208,7 +214,9 @@ class DigitClassificationModel(Module):
             A node with shape (batch_size x 10) containing predicted scores
                 (also called logits)
         """
-        """ YOUR CODE HERE """
+        x = relu(self.layer1(x))
+        x = relu(self.layer2(x))
+        return self.layer3(x)  # No activation on output layer for logits
 
  
 
@@ -225,7 +233,8 @@ class DigitClassificationModel(Module):
             y: a node with shape (batch_size x 10)
         Returns: a loss tensor
         """
-        """ YOUR CODE HERE """
+        logits = self.run(x)
+        return cross_entropy(logits, y)
 
     
         
@@ -234,7 +243,38 @@ class DigitClassificationModel(Module):
         """
         Trains the model.
         """
-        """ YOUR CODE HERE """
+        optimizer = optim.Adam(self.parameters(), lr=0.001)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+        best_validation_accuracy = 0
+        patience = 3
+        patience_counter = 0
+        max_epochs = 20
+        
+        for epoch in range(max_epochs):
+            for batch in dataloader:
+                x = batch['x']
+                y = batch['label']
+                
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                optimizer.step()
+            
+            validation_accuracy = dataset.get_validation_accuracy()
+            print(f"Epoch {epoch + 1}: Validation Accuracy = {validation_accuracy:.4f}")
+            
+            if validation_accuracy >= 0.975:  
+                print(f"Reached target validation accuracy of {validation_accuracy:.4f}. Stopping training.")
+                break
+            
+            if validation_accuracy > best_validation_accuracy:
+                best_validation_accuracy = validation_accuracy
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                if patience_counter >= patience and validation_accuracy >= 0.97:
+                    print(f"Early stopping: validation accuracy plateaued at {best_validation_accuracy:.4f}")
+                    break
 
 
 
