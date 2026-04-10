@@ -115,9 +115,12 @@ class RegressionModel(Module):
     """
     def __init__(self):
         # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
         super().__init__()
-
+        self.Linear_Layer = Linear(1, 400)
+        self.Linear_Layer2 = Linear(400, 400)
+        self.Linear_Layer3 = Linear(400, 1)
+        self.epochs = 500
+        self.lr = 0.0001
 
 
     def forward(self, x):
@@ -129,9 +132,13 @@ class RegressionModel(Module):
         Returns:
             A node with shape (batch_size x 1) containing predicted y-values
         """
-        "*** YOUR CODE HERE ***"
+        z_1 = self.Linear_Layer(x)
+        x_2 = relu(z_1)
 
-    
+        z_2 = self.Linear_Layer2(x_2)
+        x_3 = relu(z_2)
+        return self.Linear_Layer3(x_3)
+
     def get_loss(self, x, y):
         """
         Computes the loss for a batch of examples.
@@ -142,10 +149,9 @@ class RegressionModel(Module):
                 to be used for training
         Returns: a tensor of size 1 containing the loss
         """
-        "*** YOUR CODE HERE ***"
- 
-        
+        return mse_loss(self.forward(x), y)
 
+ 
     def train(self, dataset):
         """
         Trains the model.
@@ -160,7 +166,17 @@ class RegressionModel(Module):
             dataset: a PyTorch dataset object containing data to be trained on
             
         """
-        "*** YOUR CODE HERE ***"
+        data_loader = DataLoader(dataset, batch_size=10, shuffle=True)
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
+        for _ in range(self.epochs):
+            for data in data_loader: 
+                x = data['x']
+                y = data['label']
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                optimizer.step()
+
 
             
 
@@ -500,5 +516,14 @@ class Attention(Module):
         B, T, C = input.size()
 
         """YOUR CODE HERE"""
+        K = self.k_layer(input)
+        Q = self.q_layer(input)
+        V = self.v_layer(input)
+        attention_scores = matmul(K, movedim(Q, -2, -1)) / (self.layer_size ** 0.5)
+        M = attention_scores.masked_fill(self.mask[:,:,:T,:T] == 0, float('-inf'))[0]
+        attention_weights = softmax(M, dim=-1)
+        output = matmul(attention_weights, V)
+        return output
+
 
      
